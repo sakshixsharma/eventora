@@ -1,0 +1,14 @@
+EVENTORA running on http://localhost:3000
+[0mGET /api/csrf-token [32m200[0m 3.503 ms - 144[0m
+[0mPOST /api/auth/login [32m200[0m 1185.774 ms - 164[0m
+[0mGET /api/csrf-token [32m200[0m 0.696 ms - 144[0m
+[0mPOST /api/auth/login [32m200[0m 1213.132 ms - 164[0m
+[0mGET /api/csrf-token [32m200[0m 115.005 ms - 144[0m
+[0mPOST /api/auth/login [33m401[0m 191.450 ms - 37[0m
+[0mGET /api/auth/me [32m200[0m 852.359 ms - 164[0m
+[0mGET /login.html?email=&password= [36m304[0m 5.760 ms - -[0m
+[0mGET /vendor/bootstrap/bootstrap.min.css [36m304[0m 2.958 ms - -[0m
+[0mGET /assets/css/base.css [36m304[0m 2.221 ms - -[0m
+[0mGET /assets/css/components.css [36m304[0m 3.748 ms - -[0m
+[0mGET /vendor/bootstrap/bootstrap.bundle.min.js [36m304[0m 1.853 ms - -[0m
+[0mGET /vendor/three/three.min.js [36m304[0m 1.619 ms - -[0m
