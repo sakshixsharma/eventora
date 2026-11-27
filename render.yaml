@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: eventora
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SESSION_SECRET
+        sync: false
+      - key: CSRF_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: PGSSLMODE
+        value: require
+      - key: JWT_SECRET
+        sync: false
+      - key: INSFORGE_API_KEY
+        sync: false

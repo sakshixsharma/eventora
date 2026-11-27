@@ -4,14 +4,23 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { parseCookies } = require('./src/middleware/cookieParser');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+const isProd = process.env.NODE_ENV === 'production';
+const PORT = Number(process.env.PORT) || 5000;
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
 
-const { pool } = require('./src/config/db');
+if (isProd && !SESSION_SECRET) {
+  console.error('Missing required SESSION_SECRET in production.');
+  process.exit(1);
+}
+
+const { pool, verifyDatabaseConnection } = require('./src/config/db');
 const { requireAuth, requireRole } = require('./src/middleware/auth');
 const { doubleCsrfProtection, csrfTokenRoute } = require('./src/middleware/csrf');
 const { notFound, errorHandler } = require('./src/middleware/errors');
@@ -25,10 +34,8 @@ const userRoutes = require('./src/routes/users');
 const notificationRoutes = require('./src/routes/notifications');
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-const isProd = process.env.NODE_ENV === 'production';
 
-if (isProd) app.set('trust proxy', 1);
+app.set('trust proxy', 1);
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -49,16 +56,18 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-app.use(morgan('dev'));
+app.use(morgan(isProd ? 'combined' : 'dev'));
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false }));
-app.use(parseCookies);
+app.use(cookieParser());
 
 app.use(session({
   store: new PgSession({ pool, tableName: 'session', createTableIfMissing: false }),
-  secret: process.env.SESSION_SECRET || 'dev-session-secret-change-me',
+  name: 'eventora.sid',
+  secret: SESSION_SECRET || 'dev-session-secret-change-me',
   resave: false,
   saveUninitialized: false,
+  proxy: true,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
@@ -84,12 +93,23 @@ app.use('/api', (req, res, next) => {
   return doubleCsrfProtection(req, res, next);
 });
 
+app.get('/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ok' });
+  } catch (err) {
+    console.error('Health check database failure:', err.message);
+    res.status(503).json({ status: 'error', error: 'Database connection failed' });
+  }
+});
+
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1');
-    res.json({ ok: true, db: true, time: new Date().toISOString() });
+    res.json({ status: 'ok', ok: true, db: true, time: new Date().toISOString() });
   } catch (err) {
-    res.status(500).json({ ok: false, db: false, error: 'Database connection failed' });
+    console.error('Health check database failure:', err.message);
+    res.status(503).json({ status: 'error', ok: false, db: false, error: 'Database connection failed' });
   }
 });
 
@@ -119,8 +139,19 @@ app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], i
 app.use(notFound);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`EVENTORA running on http://localhost:${PORT}`);
-});
+async function start() {
+  try {
+    await verifyDatabaseConnection();
+  } catch (err) {
+    console.error('Database connection failed during startup:', err.message);
+    process.exit(1);
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`EVENTORA running on http://0.0.0.0:${PORT}`);
+  });
+}
+
+start();
 
 

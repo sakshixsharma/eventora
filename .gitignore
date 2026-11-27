@@ -1,6 +1,12 @@
-﻿.env
-node_modules/
+﻿node_modules/
+.env
+.env.*
+!.env.example
+cookies*.txt
+login.json
+*.log
+.DS_Store
+
+# uploads - keep directory marker
 public/uploads/*
 !public/uploads/.gitkeep
-npm-debug.log*
-.DS_Store
